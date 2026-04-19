@@ -169,21 +169,25 @@ function renderUserSelect() {
     return;
   }
   list.innerHTML = users.map((u) => `
-    <button class="user-tile" data-user-id="${escapeHtml(u.id)}" role="listitem">
-      <span class="user-badge" style="background:${escapeHtml(u.color)}">${escapeHtml(u.emoji || u.name[0] || '?')}</span>
-      <span>${escapeHtml(u.name)}</span>
-      <span class="role">${u.role === 'parent' ? 'Elternteil' : 'Kind'}</span>
-    </button>
+    <div class="user-tile-wrap" role="listitem">
+      <button class="user-tile" data-user-id="${escapeHtml(u.id)}">
+        <span class="user-badge" style="background:${escapeHtml(u.color)}">${escapeHtml(u.emoji || u.name[0] || '?')}</span>
+        <span>${escapeHtml(u.name)}</span>
+        <span class="role">${u.role === 'parent' ? 'Elternteil' : 'Kind'}</span>
+      </button>
+      <button class="user-tile-edit" data-edit-user-id="${escapeHtml(u.id)}" aria-label="${escapeHtml(u.name)} bearbeiten">✏</button>
+    </div>
   `).join('');
   list.querySelectorAll('.user-tile').forEach((t) => {
     t.addEventListener('click', () => {
-      const id = t.dataset.userId;
-      config.set('currentUserId', id);
+      config.set('currentUserId', t.dataset.userId);
       showScreen('app');
     });
-    t.addEventListener('contextmenu', (ev) => {
-      ev.preventDefault();
-      openUserModal(t.dataset.userId);
+  });
+  list.querySelectorAll('.user-tile-edit').forEach((b) => {
+    b.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      openUserModal(b.dataset.editUserId);
     });
   });
 }
@@ -606,6 +610,24 @@ function wireSettingsModal() {
     closeModal(modal);
     showScreen('setup');
   });
+  document.getElementById('settings-add-user-btn').addEventListener('click', () => {
+    closeModal(modal);
+    openUserModal(null);
+  });
+  modal.addEventListener('click', (ev) => {
+    const editBtn = ev.target.closest('[data-settings-edit-user]');
+    if (editBtn) { closeModal(modal); openUserModal(editBtn.dataset.settingsEditUser); }
+    const delBtn = ev.target.closest('[data-settings-delete-user]');
+    if (delBtn) {
+      const u = store.getUser(delBtn.dataset.settingsDeleteUser);
+      if (!u) return;
+      if (!confirm(`Profil „${u.name}" wirklich löschen?`)) return;
+      if (config.get('currentUserId') === u.id) config.set('currentUserId', null);
+      store.deleteUser(u.id);
+      renderSettingsUserList();
+      renderSidebar();
+    }
+  });
 }
 
 function openSettingsModal() {
@@ -616,7 +638,32 @@ function openSettingsModal() {
   document.getElementById('settings-pat').value = '';
   document.getElementById('settings-theme').value = config.get('theme') || 'auto';
   document.getElementById('settings-version').textContent = window.__APP_VERSION__ || 'unbekannt';
+  renderSettingsUserList();
   modal.showModal();
+}
+
+function renderSettingsUserList() {
+  const container = document.getElementById('settings-user-list');
+  if (!container) return;
+  const users = store.getUsers();
+  const me = config.get('currentUserId');
+  if (!users.length) {
+    container.innerHTML = '<p class="small muted">Noch keine Profile.</p>';
+    return;
+  }
+  container.innerHTML = users.map((u) => `
+    <div class="settings-user-item">
+      <span class="user-badge" style="background:${escapeHtml(u.color)}">${escapeHtml(u.emoji || u.name[0] || '?')}</span>
+      <div class="user-info">
+        <div class="user-info-name">${escapeHtml(u.name)}${u.id === me ? ' <span style="color:var(--primary);font-size:0.75rem">(Du)</span>' : ''}</div>
+        <div class="user-info-role">${u.role === 'parent' ? 'Elternteil' : 'Kind'}</div>
+      </div>
+      <div class="user-actions">
+        <button type="button" class="btn btn-secondary btn-sm" data-settings-edit-user="${escapeHtml(u.id)}">✏ Bearbeiten</button>
+        <button type="button" class="btn btn-danger btn-sm" data-settings-delete-user="${escapeHtml(u.id)}">✕</button>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ---- Calendar day click ----

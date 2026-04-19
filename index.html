@@ -62,6 +62,7 @@
       <h1>Wer bist du?</h1>
       <p class="lead">Wähle dein Profil. <strong>Eltern</strong> können Aufgaben erstellen und zuweisen, <strong>Kinder</strong> erledigen sie und geben Rückmeldung.</p>
       <div id="user-list" class="user-grid" role="list"></div>
+      <p class="small muted" style="margin-top:0.8rem">Dein Profil wird auf diesem Gerät gespeichert – beim nächsten Besuch landest du direkt in der App.</p>
       <div class="actions actions-spread">
         <button id="user-add-btn" class="btn btn-secondary">+ Neues Profil</button>
         <button id="open-settings-from-userselect" class="btn-link">⚙ Einstellungen</button>
@@ -299,6 +300,10 @@
         <button type="button" class="btn-icon" data-close-modal aria-label="Schließen">✕</button>
       </header>
       <div class="modal-body">
+        <h3>Personen</h3>
+        <div id="settings-user-list" class="settings-user-list"></div>
+        <button type="button" id="settings-add-user-btn" class="btn btn-secondary btn-sm" style="margin-top:0.4rem">+ Person anlegen</button>
+
         <h3>Sync-Verbindung</h3>
         <label class="field">
           <span>Owner</span>

@@ -230,6 +230,43 @@ textarea { resize: vertical; min-height: 64px; }
 }
 
 /* ========== User grid (user-select screen) ========== */
+.user-tile-wrap {
+  position: relative;
+}
+.user-tile-wrap .user-tile-edit {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-elev);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-sm);
+  opacity: 0.7;
+  transition: opacity var(--transition), background var(--transition);
+  z-index: 1;
+}
+.user-tile-wrap .user-tile-edit:hover { opacity: 1; background: var(--bg-elev-2); color: var(--primary); }
+.user-tile-wrap .user-tile { width: 100%; }
+
+/* Settings user list */
+.settings-user-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.settings-user-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.45rem 0.5rem;
+  background: var(--bg-elev-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.settings-user-item .user-badge { width: 28px; height: 28px; font-size: 0.9rem; flex-shrink: 0; }
+.settings-user-item .user-info { flex: 1; min-width: 0; }
+.settings-user-item .user-info-name { font-weight: 500; font-size: 0.95rem; }
+.settings-user-item .user-info-role { font-size: 0.75rem; color: var(--text-muted); }
+.settings-user-item .user-actions { display: flex; gap: 0.3rem; }
+
 .user-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
