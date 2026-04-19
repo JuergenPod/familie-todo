@@ -22,6 +22,7 @@ let ui = {
   editingUserId: null,
   view: config.get('view') || 'list', // 'list' | 'calendar'
 };
+let editingTags = [];
 
 // ---- Boot ----
 document.addEventListener('DOMContentLoaded', boot);
@@ -279,6 +280,12 @@ function wireTaskModal() {
     closeModal(modal);
   });
 
+  // Tags
+  document.getElementById('task-tag-add').addEventListener('click', addTagFromInput);
+  document.getElementById('task-tag-input').addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); addTagFromInput(); }
+  });
+
   // Subtasks
   document.getElementById('task-subtask-add').addEventListener('click', addSubtaskFromInput);
   document.getElementById('task-subtask-input').addEventListener('keydown', (ev) => {
@@ -300,8 +307,8 @@ function openTaskModal(taskId, presetData = null) {
   const assigneeSel = document.getElementById('task-assignee');
   assigneeSel.innerHTML = users.map((u) => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.emoji || '')} ${escapeHtml(u.name)}</option>`).join('');
 
-  const catList = document.getElementById('category-list');
-  catList.innerHTML = store.getCategories().map((c) => `<option value="${escapeHtml(c)}"></option>`).join('');
+  const dl = document.getElementById('tags-datalist');
+  if (dl) dl.innerHTML = store.getTags().map((t) => `<option value="${escapeHtml(t)}"></option>`).join('');
 
   let t;
   if (taskId) {
@@ -313,7 +320,7 @@ function openTaskModal(taskId, presetData = null) {
     document.getElementById('task-time-section').classList.remove('hidden');
   } else {
     t = {
-      title: '', description: '', category: '',
+      title: '', description: '', tags: [],
       assignedTo: preferredAssignee(users),
       dueDate: presetData?.dueDate || '',
       estimatedMinutes: '', priority: 'medium',
@@ -327,10 +334,11 @@ function openTaskModal(taskId, presetData = null) {
     document.getElementById('task-time-section').classList.add('hidden');
   }
 
+  editingTags = Array.isArray(t.tags) ? [...t.tags] : [];
   document.getElementById('task-title').value = t.title || '';
   document.getElementById('task-description').value = t.description || '';
-  document.getElementById('task-category').value = t.category || '';
   document.getElementById('task-assignee').value = t.assignedTo || preferredAssignee(users) || '';
+  renderTagsInModal();
   document.getElementById('task-due').value = t.dueDate || '';
   document.getElementById('task-estimated').value = t.estimatedMinutes ?? '';
   document.getElementById('task-priority').value = t.priority || 'medium';
@@ -359,7 +367,7 @@ function saveTaskFromForm() {
   const data = {
     title: document.getElementById('task-title').value.trim(),
     description: document.getElementById('task-description').value.trim(),
-    category: document.getElementById('task-category').value.trim(),
+    tags: [...editingTags],
     assignedTo: document.getElementById('task-assignee').value,
     dueDate: document.getElementById('task-due').value || null,
     estimatedMinutes: parseIntOrNull(document.getElementById('task-estimated').value),
@@ -417,6 +425,37 @@ function renderSubtasksInModal(t) {
       }
     });
   });
+}
+
+function renderTagsInModal() {
+  const display = document.getElementById('task-tags-display');
+  if (!display) return;
+  display.innerHTML = editingTags.map((tag) => `
+    <span class="tag-chip">
+      ${escapeHtml(tag)}
+      <button type="button" class="tag-chip-remove" data-tag="${escapeHtml(tag)}" aria-label="Tag entfernen">×</button>
+    </span>
+  `).join('');
+  display.querySelectorAll('.tag-chip-remove').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      editingTags = editingTags.filter((t) => t !== btn.dataset.tag);
+      renderTagsInModal();
+    });
+  });
+  // Refresh datalist (exclude already-added tags)
+  const dl = document.getElementById('tags-datalist');
+  if (dl) dl.innerHTML = store.getTags().filter((t) => !editingTags.includes(t)).map((t) => `<option value="${escapeHtml(t)}"></option>`).join('');
+}
+
+function addTagFromInput() {
+  const input = document.getElementById('task-tag-input');
+  const tag = (input?.value || '').trim();
+  if (!tag) return;
+  if (!editingTags.includes(tag)) {
+    editingTags.push(tag);
+    renderTagsInModal();
+  }
+  if (input) input.value = '';
 }
 
 function addSubtaskFromInput() {
@@ -723,14 +762,14 @@ function renderSidebar() {
     </button>`;
   }).join('');
 
-  // Categories
-  const cats = store.getCategories();
-  const catNav = document.getElementById('sidebar-categories');
-  catNav.innerHTML = cats.length ? cats.map((c) => {
-    const cnt = tasks.filter((t) => t.category === c && t.status === 'open').length;
-    const active = ui.currentFilter.type === 'category' && ui.currentFilter.value === c;
-    return `<button class="nav-item ${active ? 'active' : ''}" data-filter-type="category" data-filter="${escapeHtml(c)}">
-      <span>${escapeHtml(c)}</span><span class="count">${cnt}</span>
+  // Tags
+  const tags = store.getTags();
+  const tagNav = document.getElementById('sidebar-tags');
+  tagNav.innerHTML = tags.length ? tags.map((tag) => {
+    const cnt = tasks.filter((t) => (t.tags || []).includes(tag) && t.status === 'open').length;
+    const active = ui.currentFilter.type === 'tag' && ui.currentFilter.value === tag;
+    return `<button class="nav-item ${active ? 'active' : ''}" data-filter-type="tag" data-filter="${escapeHtml(tag)}">
+      <span>${escapeHtml(tag)}</span><span class="count">${cnt}</span>
     </button>`;
   }).join('') : '<p class="small muted" style="padding:0.2rem 0.4rem">Noch keine.</p>';
 

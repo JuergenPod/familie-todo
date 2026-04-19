@@ -100,8 +100,8 @@
           <h2>Personen</h2>
           <div id="sidebar-users" class="nav-group"></div>
 
-          <h2>Kategorien</h2>
-          <div id="sidebar-categories" class="nav-group"></div>
+          <h2>Tags</h2>
+          <div id="sidebar-tags" class="nav-group"></div>
 
           <h2>Punktestand</h2>
           <div id="sidebar-points" class="nav-group points-list"></div>
@@ -165,16 +165,18 @@
           <span>Beschreibung</span>
           <textarea id="task-description" rows="3" maxlength="2000"></textarea>
         </label>
-        <div class="form-row">
-          <label class="field">
-            <span>Zugewiesen an</span>
-            <select id="task-assignee" required></select>
-          </label>
-          <label class="field">
-            <span>Kategorie</span>
-            <input type="text" id="task-category" list="category-list" placeholder="z.B. Mathe" maxlength="60" />
-            <datalist id="category-list"></datalist>
-          </label>
+        <label class="field">
+          <span>Zugewiesen an</span>
+          <select id="task-assignee" required></select>
+        </label>
+        <div class="field">
+          <span class="field-label">Tags <small class="muted">(z.B. Mathe, Schularbeit)</small></span>
+          <div id="task-tags-display" class="tags-display"></div>
+          <div class="inline-row">
+            <input type="text" id="task-tag-input" list="tags-datalist" placeholder="Tag eingeben und + drücken…" maxlength="60" />
+            <datalist id="tags-datalist"></datalist>
+            <button type="button" id="task-tag-add" class="btn btn-secondary btn-sm">+</button>
+          </div>
         </div>
         <div class="form-row">
           <label class="field">

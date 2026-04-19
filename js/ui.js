@@ -14,7 +14,7 @@ export function filterTasks(tasks, { filterType, filterValue, currentUserId, sea
   return tasks.filter((t) => {
     if (t.deletedAt) return false;
     if (needle) {
-      const hay = (t.title + ' ' + (t.description || '') + ' ' + (t.category || '')).toLowerCase();
+      const hay = (t.title + ' ' + (t.description || '') + ' ' + (t.tags || []).join(' ')).toLowerCase();
       if (!hay.includes(needle)) return false;
     }
     if (filterType === 'preset') {
@@ -29,7 +29,7 @@ export function filterTasks(tasks, { filterType, filterValue, currentUserId, sea
       }
     }
     if (filterType === 'user') return t.assignedTo === filterValue;
-    if (filterType === 'category') return t.category === filterValue;
+    if (filterType === 'tag') return (t.tags || []).includes(filterValue);
     return true;
   });
 }
@@ -103,7 +103,7 @@ export function renderTaskCard(task, users) {
     const cls = isOverdue ? 'chip-due-overdue' : isToday ? 'chip-due-today' : '';
     chips.push(`<span class="task-chip ${cls}">📅 ${escapeHtml(formatDueDate(task.dueDate))}</span>`);
   }
-  if (task.category) chips.push(`<span class="task-chip">${escapeHtml(task.category)}</span>`);
+  for (const tag of (task.tags || [])) chips.push(`<span class="task-chip task-chip-tag">${escapeHtml(tag)}</span>`);
   if (task.estimatedMinutes) chips.push(`<span class="task-chip" title="Geplante Zeit">⏱ ${escapeHtml(formatMinutes(task.estimatedMinutes))}</span>`);
   if (task.actualMinutes) chips.push(`<span class="task-chip" title="Tatsächliche Zeit">✓ ${escapeHtml(formatMinutes(task.actualMinutes))}</span>`);
   if (subTotal) chips.push(`<span class="task-chip" title="Subtasks">☑ ${subDone}/${subTotal}</span>`);

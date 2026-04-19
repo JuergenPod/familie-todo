@@ -50,7 +50,7 @@ function normalizeTask(t) {
     id: t.id,
     title: t.title || '',
     description: t.description || '',
-    category: t.category || '',
+    tags: Array.isArray(t.tags) ? t.tags.map(String).filter(Boolean) : (t.category ? [t.category] : []),
     assignedTo: t.assignedTo || null,
     createdBy: t.createdBy || null,
     createdAt: t.createdAt || new Date().toISOString(),
@@ -255,11 +255,11 @@ export const store = {
     if (s.pointsLog.length !== before) persist();
   },
 
-  // Categories helper
-  getCategories() {
+  // Tags helper
+  getTags() {
     const set = new Set();
     for (const t of load().tasks) {
-      if (!t.deletedAt && t.category) set.add(t.category);
+      if (!t.deletedAt) for (const tag of (t.tags || [])) set.add(tag);
     }
     return [...set].sort((a, b) => a.localeCompare(b, 'de'));
   },
@@ -309,7 +309,7 @@ function spawnRecurrent(t) {
     id: 't_' + uid(),
     title: t.title,
     description: t.description,
-    category: t.category,
+    tags: Array.isArray(t.tags) ? [...t.tags] : [],
     assignedTo: t.assignedTo,
     createdBy: t.createdBy,
     createdAt: now,
