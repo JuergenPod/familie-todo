@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#4f46e5" />
+  <title>Familie ToDo</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.svg" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <!-- Top Banners -->
+  <div id="update-banner" class="banner banner-update hidden" role="alert">
+    <span id="update-banner-text">Neue Version verfügbar.</span>
+    <button id="update-reload-btn" class="btn btn-primary btn-sm">Neu laden</button>
+    <button id="update-dismiss-btn" class="btn-icon" aria-label="Schließen">✕</button>
+  </div>
+
+  <div id="offline-banner" class="banner banner-warning hidden" role="status">
+    <span>Offline – Änderungen werden beim Reconnect synchronisiert.</span>
+  </div>
+
+  <!-- Setup Screen -->
+  <section id="setup-screen" class="fullscreen hidden">
+    <div class="card card-narrow">
+      <h1>Willkommen! 👋</h1>
+      <p class="lead">Damit deine Aufgaben zwischen deinen Geräten und mit der Familie synchron bleiben, brauchen wir einmalig Zugriff auf euer privates GitHub-Repository.</p>
+
+      <form id="setup-form" class="form">
+        <label class="field">
+          <span>GitHub Benutzername (Owner)</span>
+          <input type="text" id="setup-owner" required autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>Repository</span>
+          <input type="text" id="setup-repo" required autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>Pfad zur Datei im Repo</span>
+          <input type="text" id="setup-path" required autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>Personal Access Token (PAT)</span>
+          <input type="password" id="setup-pat" required autocomplete="off" />
+          <small>Benötigt <code>Contents: Read and write</code> auf das private Repo. Wird nur auf diesem Gerät gespeichert.</small>
+        </label>
+
+        <div id="setup-error" class="error hidden"></div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="setup-submit">Verbinden</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- User Selection Screen -->
+  <section id="user-select-screen" class="fullscreen hidden">
+    <div class="card card-narrow">
+      <h1>Wer bist du?</h1>
+      <p class="lead">Wähle dein Profil. <strong>Eltern</strong> können Aufgaben erstellen und zuweisen, <strong>Kinder</strong> erledigen sie und geben Rückmeldung.</p>
+      <div id="user-list" class="user-grid" role="list"></div>
+      <div class="actions actions-spread">
+        <button id="user-add-btn" class="btn btn-secondary">+ Neues Profil</button>
+        <button id="open-settings-from-userselect" class="btn-link">⚙ Einstellungen</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main App -->
+  <section id="app" class="app hidden">
+    <header class="app-header">
+      <button id="menu-toggle" class="btn-icon" aria-label="Menü" aria-expanded="false">☰</button>
+      <h1 class="app-title">Familie ToDo</h1>
+      <div class="header-actions">
+        <button id="sync-btn" class="btn-icon" title="Synchronisieren" aria-label="Synchronisieren">⟳</button>
+        <button id="theme-toggle" class="btn-icon" title="Farbschema wechseln" aria-label="Farbschema wechseln">◐</button>
+        <button id="user-btn" class="user-pill" aria-label="Aktueller Nutzer">
+          <span id="user-badge" class="user-badge"></span>
+          <span id="user-name" class="user-name-label"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+      <aside id="sidebar" class="sidebar">
+        <nav class="sidebar-nav" aria-label="Filter">
+          <h2>Filter</h2>
+          <button class="nav-item active" data-filter="all" data-filter-type="preset">Alle</button>
+          <button class="nav-item" data-filter="mine" data-filter-type="preset">Meine Aufgaben</button>
+          <button class="nav-item" data-filter="today" data-filter-type="preset">Heute</button>
+          <button class="nav-item" data-filter="overdue" data-filter-type="preset">Überfällig</button>
+          <button class="nav-item" data-filter="open" data-filter-type="preset">Offen</button>
+          <button class="nav-item" data-filter="done" data-filter-type="preset">Erledigt</button>
+
+          <h2>Personen</h2>
+          <div id="sidebar-users" class="nav-group"></div>
+
+          <h2>Kategorien</h2>
+          <div id="sidebar-categories" class="nav-group"></div>
+
+          <h2>Punktestand</h2>
+          <div id="sidebar-points" class="nav-group points-list"></div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button id="settings-btn" class="btn-link">⚙ Einstellungen</button>
+          <span id="last-sync" class="last-sync"></span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="main-toolbar">
+          <input id="search-input" type="search" placeholder="Suchen…" aria-label="Suchen" />
+          <select id="sort-select" aria-label="Sortierung">
+            <option value="sortOrder">Eigene Reihenfolge</option>
+            <option value="due">Fälligkeit</option>
+            <option value="priority">Priorität</option>
+            <option value="created">Erstellt</option>
+            <option value="assignee">Zugewiesen an</option>
+          </select>
+        </div>
+
+        <div id="task-stats" class="task-stats"></div>
+
+        <div class="board">
+          <section class="board-col" data-status="open">
+            <h2 class="board-col-title">Offen <span class="count" id="count-open">0</span></h2>
+            <div id="task-list-open" class="task-list" data-status="open"></div>
+          </section>
+          <section class="board-col" data-status="done">
+            <h2 class="board-col-title">Erledigt <span class="count" id="count-done">0</span></h2>
+            <div id="task-list-done" class="task-list task-list-done" data-status="done"></div>
+          </section>
+        </div>
+
+        <div id="empty-state" class="empty-state hidden">
+          <p>Hier ist es aufgeräumt. ✨</p>
+          <p class="small">Keine Aufgaben passen zu diesem Filter.</p>
+        </div>
+      </main>
+    </div>
+
+    <button id="new-task-btn" class="fab" aria-label="Neue Aufgabe">+</button>
+  </section>
+
+  <!-- Task Modal -->
+  <dialog id="task-modal" class="modal" aria-labelledby="task-modal-title">
+    <form id="task-form" method="dialog">
+      <header class="modal-header">
+        <h2 id="task-modal-title">Neue Aufgabe</h2>
+        <button type="button" class="btn-icon" data-close-modal aria-label="Schließen">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <label class="field">
+          <span>Titel</span>
+          <input type="text" id="task-title" required maxlength="200" />
+        </label>
+        <label class="field">
+          <span>Beschreibung</span>
+          <textarea id="task-description" rows="3" maxlength="2000"></textarea>
+        </label>
+        <div class="form-row">
+          <label class="field">
+            <span>Zugewiesen an</span>
+            <select id="task-assignee" required></select>
+          </label>
+          <label class="field">
+            <span>Kategorie</span>
+            <input type="text" id="task-category" list="category-list" placeholder="z.B. Mathe" maxlength="60" />
+            <datalist id="category-list"></datalist>
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span>Fällig</span>
+            <input type="date" id="task-due" />
+          </label>
+          <label class="field">
+            <span>Geplante Zeit (Min.)</span>
+            <input type="number" id="task-estimated" min="0" max="1440" step="5" />
+          </label>
+          <label class="field">
+            <span>Priorität</span>
+            <select id="task-priority">
+              <option value="low">Niedrig</option>
+              <option value="medium" selected>Normal</option>
+              <option value="high">Hoch</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span>Wiederholung</span>
+            <select id="task-recurrence">
+              <option value="">keine</option>
+              <option value="daily">täglich</option>
+              <option value="weekdays">werktags</option>
+              <option value="weekly">wöchentlich</option>
+              <option value="monthly">monatlich</option>
+            </select>
+          </label>
+          <label class="field" id="task-points-field">
+            <span>Punkte <small class="muted">(leer = Default)</small></span>
+            <input type="number" id="task-points" min="0" max="999" step="1" placeholder="Auto" />
+          </label>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Subtasks</span>
+          <ul id="task-subtasks-list" class="subtasks-list"></ul>
+          <div class="inline-row">
+            <input type="text" id="task-subtask-input" placeholder="Neuen Subtask hinzufügen…" maxlength="200" />
+            <button type="button" id="task-subtask-add" class="btn btn-secondary btn-sm">+</button>
+          </div>
+        </div>
+
+        <div id="task-comments-section" class="hidden">
+          <h3>Kommentare</h3>
+          <div id="task-comments-list" class="comments-list"></div>
+          <div class="inline-row">
+            <input type="text" id="task-comment-input" placeholder="Kommentar hinzufügen…" maxlength="500" />
+            <button type="button" id="task-comment-add" class="btn btn-secondary btn-sm">Senden</button>
+          </div>
+        </div>
+
+        <div id="task-time-section" class="hidden">
+          <h3>Tatsächliche Zeit</h3>
+          <div class="time-tracker">
+            <span id="task-timer-display" class="timer-display">00:00</span>
+            <button type="button" id="task-timer-toggle" class="btn btn-secondary btn-sm">Start</button>
+            <label class="inline-label">
+              <span>oder manuell (Min.):</span>
+              <input type="number" id="task-actual" min="0" max="1440" step="1" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal-footer">
+        <button type="button" id="task-delete-btn" class="btn btn-danger hidden">Löschen</button>
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-secondary" data-close-modal>Abbrechen</button>
+          <button type="submit" class="btn btn-primary" id="task-save-btn">Speichern</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- User Modal -->
+  <dialog id="user-modal" class="modal" aria-labelledby="user-modal-title">
+    <form id="user-form" method="dialog">
+      <header class="modal-header">
+        <h2 id="user-modal-title">Neues Profil</h2>
+        <button type="button" class="btn-icon" data-close-modal aria-label="Schließen">✕</button>
+      </header>
+      <div class="modal-body">
+        <label class="field">
+          <span>Name</span>
+          <input type="text" id="user-form-name" required maxlength="40" />
+        </label>
+        <label class="field">
+          <span>Rolle</span>
+          <select id="user-form-role">
+            <option value="parent">Elternteil</option>
+            <option value="kid">Kind</option>
+          </select>
+        </label>
+        <div class="form-row">
+          <label class="field">
+            <span>Farbe</span>
+            <input type="color" id="user-form-color" value="#4f46e5" />
+          </label>
+          <label class="field">
+            <span>Emoji</span>
+            <input type="text" id="user-form-emoji" maxlength="3" placeholder="🧑" />
+          </label>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button type="button" id="user-delete-btn" class="btn btn-danger hidden">Löschen</button>
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-secondary" data-close-modal>Abbrechen</button>
+          <button type="submit" class="btn btn-primary">Speichern</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Settings Modal -->
+  <dialog id="settings-modal" class="modal" aria-labelledby="settings-modal-title">
+    <form id="settings-form" method="dialog">
+      <header class="modal-header">
+        <h2 id="settings-modal-title">Einstellungen</h2>
+        <button type="button" class="btn-icon" data-close-modal aria-label="Schließen">✕</button>
+      </header>
+      <div class="modal-body">
+        <h3>Sync-Verbindung</h3>
+        <label class="field">
+          <span>Owner</span>
+          <input type="text" id="settings-owner" required autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>Repository</span>
+          <input type="text" id="settings-repo" required autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>Dateipfad</span>
+          <input type="text" id="settings-path" required autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>PAT</span>
+          <input type="password" id="settings-pat" placeholder="(leer lassen, um nicht zu überschreiben)" autocomplete="off" />
+        </label>
+
+        <h3>Darstellung</h3>
+        <label class="field">
+          <span>Farbschema</span>
+          <select id="settings-theme">
+            <option value="auto">Automatisch (System)</option>
+            <option value="light">Hell</option>
+            <option value="dark">Dunkel</option>
+          </select>
+        </label>
+
+        <h3>Punkte-System</h3>
+        <p class="small muted">
+          Default-Punkte pro Priorität: Niedrig = 5, Normal = 10, Hoch = 20. Bonus +5 wenn innerhalb der geschätzten Zeit fertig. Pro Aufgabe überschreibbar im Task-Formular.
+        </p>
+
+        <h3>Info</h3>
+        <p class="small">Version: <span id="settings-version">–</span></p>
+        <p class="small">
+          <button type="button" id="settings-logout" class="btn-link">PAT entfernen & neu verbinden</button>
+        </p>
+      </div>
+      <footer class="modal-footer">
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-secondary" data-close-modal>Abbrechen</button>
+          <button type="submit" class="btn btn-primary">Speichern</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" defer></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
