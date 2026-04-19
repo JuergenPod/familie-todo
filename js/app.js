@@ -285,6 +285,8 @@ function wireTaskModal() {
   document.getElementById('task-tag-input').addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter') { ev.preventDefault(); addTagFromInput(); }
   });
+  // iOS datalist selection fires 'change' instead of keydown Enter
+  document.getElementById('task-tag-input').addEventListener('change', () => addTagFromInput());
 
   // Subtasks
   document.getElementById('task-subtask-add').addEventListener('click', addSubtaskFromInput);

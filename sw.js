@@ -1,7 +1,7 @@
 // Service worker: cache-first app shell, network-first version.json, never cache GitHub API.
 // Bump APP_VERSION in lockstep with version.json when releasing.
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const CACHE_NAME = `familie-todo-v${APP_VERSION}`;
 
 const SHELL = [
